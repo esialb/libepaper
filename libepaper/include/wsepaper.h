@@ -42,7 +42,7 @@
 struct wse_t;
 
 int wse_open(struct wse_t *epd, const char *tty_dev);
-int wse_open_fd(struct wse_t *epd, int wfd, int rfd);
+int wse_open_fd(struct wse_t *epd, int fd);
 int wse_close(struct wse_t *epd);
 
 int wse_term_init(struct wse_t *epd);

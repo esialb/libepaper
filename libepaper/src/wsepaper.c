@@ -49,8 +49,7 @@
 #define WSE_CMD_DRAW_BITMAP                    0x70                                                     //draw bitmap
 
 struct wse_t {
-	int wfd;
-	int rfd;
+	int fd;
 	unsigned char parity;
 	char buf[WSE_BUF_SIZE];
 };
@@ -78,14 +77,12 @@ static int _write_header(struct wse_t *epd, size_t plen, char cmd) {
 	*(buf++) = cmd;
 
 	_update_parity(epd, buf - epd->buf);
-	return write(epd->wfd, epd->buf, buf - epd->buf);
+	return write(epd->fd, epd->buf, buf - epd->buf);
 }
 
 static int _write_param(struct wse_t *epd, size_t plen) {
-	if(write(epd->wfd, epd->buf, plen) < 0)
-		return -1;
 	_update_parity(epd, plen);
-	return 0;
+	return write(epd->fd, epd->buf, plen);
 }
 
 static int _write_trailer(struct wse_t *epd) {
@@ -94,7 +91,7 @@ static int _write_trailer(struct wse_t *epd) {
 	memcpy(buf, _frame_trailer, sizeof(_frame_trailer)); buf += sizeof(_frame_trailer) - 1;
 	*buf = _update_parity(epd, buf - epd->buf); buf++;
 
-	return write(epd->wfd, epd->buf, buf - epd->buf);
+	return write(epd->fd, epd->buf, buf - epd->buf);
 }
 
 #define _put_byte(epd, s, c) { \
@@ -114,38 +111,33 @@ static int _write_trailer(struct wse_t *epd) {
 #define _try_write_trailer(epd) if(_write_trailer(epd)) { return -1; }
 
 int wse_open(struct wse_t *epd, const char *tty_dev) {
-	int fd = open(tty_dev, O_RDWR | O_NOCTTY);
-	if(fd < 0)
-		return -1;
+	int fd;
+	if(tty_dev) {
+		if((fd = open(tty_dev, O_RDWR | O_NOCTTY)) < 0)
+			return -1;
+	} else
+		fd = STDOUT_FILENO;
 
-	epd->wfd = epd->rfd = fd;
+	epd->fd = fd;
 
 	return 0;
 }
 
-int wse_open_fd(struct wse_t *epd, int wfd, int rfd) {
-	epd->wfd = wfd;
-	epd->rfd = rfd;
+int wse_open_fd(struct wse_t *epd, int fd) {
+	epd->fd = fd;
 	return 0;
 }
 
 int wse_close(struct wse_t *epd) {
-	int e = 0;
-	if(close(epd->wfd))
-		return -1;
-	if(epd->rfd >= 0 && epd->rfd != epd->wfd) {
-		if(close(epd->rfd))
-			return -1;
-	}
-	return e;
+	return close(epd->fd);
 }
 
-static int _term_init(int fd) {
+int wse_term_init(struct wse_t *epd) {
 	struct termios tty;
 
 	bzero(&tty, sizeof(tty));
 
-	if(tcgetattr(fd, &tty) != 0)
+	if(tcgetattr(epd->fd, &tty) != 0)
 		return -1;
 
 	cfsetspeed(&tty, B115200);
@@ -153,19 +145,9 @@ static int _term_init(int fd) {
 
 	tty.c_cflag |= HUPCL;
 
-	if(tcsetattr(fd, TCSADRAIN, &tty) != 0)
+	if(tcsetattr(epd->fd, TCSADRAIN, &tty) != 0)
 		return -1;
 
-	return 0;
-}
-
-int wse_term_init(struct wse_t *epd) {
-	if(_term_init(epd->wfd) < 0)
-		return -1;
-	if(epd->rfd >= 0 && epd->rfd != epd->wfd) {
-		if(_term_init(epd->rfd) < 0)
-			return -1;
-	}
 	return 0;
 }
 
