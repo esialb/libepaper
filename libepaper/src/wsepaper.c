@@ -113,7 +113,7 @@ static int _write_trailer(struct wse_t *epd) {
 int wse_open(struct wse_t *epd, const char *tty_dev) {
 	int fd;
 	if(tty_dev) {
-		if((fd = open(tty_dev, O_RDWR | O_NOCTTY)) < 0)
+		if((fd = open(tty_dev, O_WRONLY | O_NOCTTY)) < 0)
 			return -1;
 	} else
 		fd = STDOUT_FILENO;
