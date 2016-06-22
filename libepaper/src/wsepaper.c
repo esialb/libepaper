@@ -104,12 +104,6 @@ static int _write_trailer(struct wse_t *epd) {
 		epd->buf[s++] = 0xFF & ((i) >> 8); \
 		epd->buf[s++] = 0xFF & (i); \
 }
-#define _put_dword(epd, s, d) { \
-		epd->buf[s++] = 0xFF & ((d) >> 24); \
-		epd->buf[s++] = 0xFF & ((d) >> 16); \
-		epd->buf[s++] = 0xFF & ((d) >> 8); \
-		epd->buf[s++] = 0xFF & (d); \
-}
 #define _put_string(epd, s, str) { \
 	strcpy(epd->buf + s, str); \
 	s += strlen(str) + 1; \
